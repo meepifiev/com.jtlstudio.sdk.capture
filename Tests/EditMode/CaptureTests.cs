@@ -82,6 +82,33 @@ namespace JTLStudio.SDK.Capture.Tests
         }
 
         [Test]
+        public void ScreenshotsAndVideoAreChosenSeparately()
+        {
+            CaptureSettings settings = CaptureSettings.instance;
+            bool screenshots = settings.TakeScreenshots;
+            bool video = settings.RecordVideo;
+
+            try
+            {
+                settings.TakeScreenshots = true;
+                settings.RecordVideo = true;
+
+                Assert.IsTrue(settings.TakeScreenshots);
+                Assert.IsTrue(settings.RecordVideo);
+
+                settings.TakeScreenshots = false;
+
+                Assert.IsFalse(settings.TakeScreenshots);
+                Assert.IsTrue(settings.RecordVideo);
+            }
+            finally
+            {
+                settings.TakeScreenshots = screenshots;
+                settings.RecordVideo = video;
+            }
+        }
+
+        [Test]
         public void RecordingModeIsStored()
         {
             CaptureSettings settings = CaptureSettings.instance;

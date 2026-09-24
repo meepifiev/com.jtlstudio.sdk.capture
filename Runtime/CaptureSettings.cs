@@ -9,6 +9,8 @@ namespace JTLStudio.SDK.Capture
     public class CaptureSettings : ScriptableSingleton<CaptureSettings>
     {
         [SerializeField] private string _outputPath = "Captures";
+        [SerializeField] private bool _takeScreenshots = true;
+        [SerializeField] private bool _recordVideo;
         [SerializeField] private CaptureSource _source = CaptureSource.GameView;
         [SerializeField] private string _cameraName = "";
         [SerializeField] private bool _includeOverlayUi = true;
@@ -30,6 +32,18 @@ namespace JTLStudio.SDK.Capture
         {
             get => string.IsNullOrWhiteSpace(_outputPath) ? "Captures" : _outputPath;
             set => _outputPath = string.IsNullOrWhiteSpace(value) ? "Captures" : value.Trim();
+        }
+
+        public bool TakeScreenshots
+        {
+            get => _takeScreenshots;
+            set => _takeScreenshots = value;
+        }
+
+        public bool RecordVideo
+        {
+            get => _recordVideo;
+            set => _recordVideo = value;
         }
 
         public CaptureSource Source

@@ -43,25 +43,60 @@ namespace JTLStudio.SDK.Capture
             }
         }
 
+        public void Run()
+        {
+            CaptureSettings settings = CaptureSettings.instance;
+            Begin(settings.TakeScreenshots, settings.RecordVideo);
+        }
+
         public void TakeScreenshots()
         {
-            if (IsBusy == false)
-            {
-                StartCoroutine(ScreenshotRoutine());
-            }
+            Begin(true, false);
         }
 
         public void StartVideo()
         {
-            if (IsBusy == false)
-            {
-                StartCoroutine(VideoRoutine());
-            }
+            Begin(false, true);
         }
 
         public void StopVideo()
         {
             IsRecording = false;
+        }
+
+        private void Begin(bool screenshots, bool video)
+        {
+            if (IsBusy || (screenshots == false && video == false))
+            {
+                return;
+            }
+
+            if (CaptureLanguages.Selected().Count > 1 && CaptureLanguages.CanSwitch == false)
+            {
+                Status = NoSwitch;
+                Debug.LogWarning(NoSwitch);
+                return;
+            }
+
+            StartCoroutine(Sequence(screenshots, video));
+        }
+
+        private IEnumerator Sequence(bool screenshots, bool video)
+        {
+            if (screenshots)
+            {
+                yield return ScreenshotRoutine();
+            }
+
+            if (video)
+            {
+                yield return VideoRoutine();
+            }
+
+            if (CaptureSettings.instance.ExitPlayMode)
+            {
+                UnityEditor.EditorApplication.isPlaying = false;
+            }
         }
 
         private void Update()
@@ -91,13 +126,6 @@ namespace JTLStudio.SDK.Capture
             CaptureSettings settings = CaptureSettings.instance;
             List<Language> languages = CaptureLanguages.Selected();
             Vector2Int size = settings.Size;
-
-            if (languages.Count > 1 && CaptureLanguages.CanSwitch == false)
-            {
-                Status = NoSwitch;
-                Debug.LogWarning(NoSwitch);
-                yield break;
-            }
 
             IsBusy = true;
             Language original = JTLSDK.IsCreated ? JTLSDK.Language.Current : languages[0];
@@ -147,13 +175,6 @@ namespace JTLStudio.SDK.Capture
             CaptureSettings settings = CaptureSettings.instance;
             List<Language> languages = CaptureLanguages.Selected();
             Vector2Int size = settings.Size;
-
-            if (languages.Count > 1 && CaptureLanguages.CanSwitch == false)
-            {
-                Status = NoSwitch;
-                Debug.LogWarning(NoSwitch);
-                yield break;
-            }
 
             IsBusy = true;
             IsRecording = true;
@@ -279,11 +300,6 @@ namespace JTLStudio.SDK.Capture
             IsBusy = false;
             Status = "Done: " + languages.Count + " videos " + size.x + "x" + size.y + ", " + written + " frames each, in " + folder;
             CaptureOutput.Reveal(folder);
-
-            if (settings.ExitPlayMode)
-            {
-                UnityEditor.EditorApplication.isPlaying = false;
-            }
         }
     }
 }

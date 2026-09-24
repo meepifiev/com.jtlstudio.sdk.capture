@@ -61,6 +61,9 @@ namespace JTLStudio.SDK.Capture
 
         private void DrawSource(CaptureSettings settings)
         {
+            settings.TakeScreenshots = EditorGUILayout.ToggleLeft("Screenshots", settings.TakeScreenshots);
+            settings.RecordVideo = EditorGUILayout.ToggleLeft("Video", settings.RecordVideo);
+            EditorGUILayout.Space(2f);
             settings.Source = (CaptureSource)EditorGUILayout.EnumPopup("Capture from", settings.Source);
 
             if (settings.Source == CaptureSource.GameView)
@@ -99,19 +102,23 @@ namespace JTLStudio.SDK.Capture
                 settings.CustomSize = new Vector2Int(width, height);
             }
 
-            settings.FrameRate = EditorGUILayout.IntSlider("Frame rate", settings.FrameRate, 10, 120);
-            settings.RecordMode = (RecordMode)EditorGUILayout.EnumPopup("Recording mode", settings.RecordMode);
-
-            if (settings.RecordMode == RecordMode.Duration)
+            using (new EditorGUI.DisabledScope(settings.RecordVideo == false))
             {
-                settings.VideoSeconds = EditorGUILayout.Slider("Video length, s", settings.VideoSeconds, 1f, 120f);
-            }
-            else
-            {
-                EditorGUILayout.LabelField(" ", "Recording runs until you press Stop", EditorStyles.miniLabel);
+                settings.FrameRate = EditorGUILayout.IntSlider("Frame rate", settings.FrameRate, 10, 120);
+                settings.RecordMode = (RecordMode)EditorGUILayout.EnumPopup("Recording mode", settings.RecordMode);
+
+                if (settings.RecordMode == RecordMode.Duration)
+                {
+                    settings.VideoSeconds = EditorGUILayout.Slider("Video length, s", settings.VideoSeconds, 1f, 120f);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField(" ", "Recording runs until you press Stop", EditorStyles.miniLabel);
+                }
+
+                settings.RecordAudio = EditorGUILayout.Toggle("Record audio", settings.RecordAudio);
             }
 
-            settings.RecordAudio = EditorGUILayout.Toggle("Record audio", settings.RecordAudio);
             settings.ExitPlayMode = EditorGUILayout.Toggle("Exit Play Mode after", settings.ExitPlayMode);
         }
 
@@ -210,7 +217,13 @@ namespace JTLStudio.SDK.Capture
         private void DrawButtons(CaptureSettings settings)
         {
             Vector2Int size = settings.Size;
-            EditorGUILayout.LabelField("Capturing " + size.x + " x " + size.y + " in " + CaptureLanguages.Selected().Count + " languages", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(Plan(settings) + " " + size.x + " x " + size.y + " in " + CaptureLanguages.Selected().Count + " languages", EditorStyles.miniLabel);
+
+            if (settings.TakeScreenshots == false && settings.RecordVideo == false)
+            {
+                EditorGUILayout.HelpBox("Nothing is selected: tick Screenshots, Video or both.", MessageType.Info);
+                return;
+            }
 
             if (Application.isPlaying == false)
             {
@@ -222,14 +235,6 @@ namespace JTLStudio.SDK.Capture
             {
                 EditorGUILayout.HelpBox("JTL SDK is not created in this scene, so the language cannot be switched and every file would repeat one language. Create the SDK, assign CaptureLanguages.Switch or leave one language selected.", MessageType.Warning);
                 return;
-            }
-
-            using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
-            {
-                if (GUILayout.Button("Capture frame in every language", GUILayout.Height(30f)))
-                {
-                    CaptureRuntime.Instance.TakeScreenshots();
-                }
             }
 
             if (CaptureRuntime.IsRecording)
@@ -247,9 +252,9 @@ namespace JTLStudio.SDK.Capture
             {
                 using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
                 {
-                    if (GUILayout.Button("Record video in every language", GUILayout.Height(30f)))
+                    if (GUILayout.Button(Action(settings), GUILayout.Height(30f)))
                     {
-                        CaptureRuntime.Instance.StartVideo();
+                        CaptureRuntime.Instance.Run();
                     }
                 }
             }
@@ -258,6 +263,26 @@ namespace JTLStudio.SDK.Capture
             {
                 EditorGUILayout.HelpBox(CaptureRuntime.Status, MessageType.None);
             }
+        }
+
+        private string Plan(CaptureSettings settings)
+        {
+            if (settings.TakeScreenshots && settings.RecordVideo)
+            {
+                return "Screenshots and video";
+            }
+
+            return settings.RecordVideo ? "Video" : "Screenshots";
+        }
+
+        private string Action(CaptureSettings settings)
+        {
+            if (settings.TakeScreenshots && settings.RecordVideo)
+            {
+                return "Capture screenshots, then record video";
+            }
+
+            return settings.RecordVideo ? "Record video in every language" : "Capture screenshots in every language";
         }
 
         private string Relative(string path)
