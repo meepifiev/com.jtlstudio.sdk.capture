@@ -13,6 +13,7 @@ namespace JTLStudio.SDK.Capture
         private static CaptureRuntime _instance;
 
         private readonly CaptureScene _scene = new CaptureScene();
+        private readonly CaptureCanvases _canvases = new CaptureCanvases();
 
         public static bool IsRecording { get; private set; }
         public static bool IsBusy { get; private set; }
@@ -95,7 +96,13 @@ namespace JTLStudio.SDK.Capture
             Time.timeScale = 0f;
             _scene.Hide(settings);
             string folder = CaptureOutput.Folder(settings);
-            bool resized = GameViewResolution.Apply(size.x, size.y);
+            bool fromGameView = settings.Source == CaptureSource.GameView;
+            bool resized = fromGameView == false || GameViewResolution.Apply(size.x, size.y);
+
+            if (fromGameView == false && settings.IncludeOverlayUi)
+            {
+                _canvases.Attach(CaptureFrame.Find(settings.CameraName));
+            }
 
             yield return new WaitForEndOfFrame();
             yield return new WaitForEndOfFrame();
@@ -109,21 +116,15 @@ namespace JTLStudio.SDK.Capture
                 yield return new WaitForEndOfFrame();
                 yield return new WaitForEndOfFrame();
 
-                Texture2D frame = ScreenCapture.CaptureScreenshotAsTexture();
-                Texture2D shot = CaptureImage.Fit(frame, size.x, size.y);
+                Texture2D shot = CaptureFrame.Grab(settings, size);
                 CaptureImage.WritePng(shot, Path.Combine(folder, CaptureOutput.Name(size, language, "png")));
-
-                if (shot != frame)
-                {
-                    DestroyImmediate(shot);
-                }
-
-                DestroyImmediate(frame);
+                DestroyImmediate(shot);
                 saved++;
                 Status = (resized ? "Captured " : "Game View kept its size, cropping: ") + saved + " of " + languages.Count;
             }
 
             GameViewResolution.Restore();
+            _canvases.Restore();
             CaptureLanguages.Apply(original);
             _scene.Restore();
             Time.timeScale = scale;
@@ -142,7 +143,15 @@ namespace JTLStudio.SDK.Capture
             IsRecording = true;
             Language original = JTLSDK.IsCreated ? JTLSDK.Language.Current : languages[0];
             _scene.Hide(settings);
-            GameViewResolution.Apply(size.x, size.y);
+
+            if (settings.Source == CaptureSource.GameView)
+            {
+                GameViewResolution.Apply(size.x, size.y);
+            }
+            else if (settings.IncludeOverlayUi)
+            {
+                _canvases.Attach(CaptureFrame.Find(settings.CameraName));
+            }
 
             yield return new WaitForEndOfFrame();
             yield return new WaitForEndOfFrame();
@@ -195,16 +204,9 @@ namespace JTLStudio.SDK.Capture
                     CaptureLanguages.Apply(languages[index]);
                     yield return new WaitForEndOfFrame();
 
-                    Texture2D shot = ScreenCapture.CaptureScreenshotAsTexture();
-                    Texture2D picture = CaptureImage.Fit(shot, size.x, size.y);
+                    Texture2D picture = CaptureFrame.Grab(settings, size);
                     encoders[index].AddFrame(picture);
-
-                    if (picture != shot)
-                    {
-                        DestroyImmediate(picture);
-                    }
-
-                    DestroyImmediate(shot);
+                    DestroyImmediate(picture);
 
                     if (settings.RecordAudio)
                     {
@@ -251,6 +253,7 @@ namespace JTLStudio.SDK.Capture
 
             Time.captureDeltaTime = capture;
             GameViewResolution.Restore();
+            _canvases.Restore();
             CaptureLanguages.Apply(original);
             _scene.Restore();
             IsRecording = false;
