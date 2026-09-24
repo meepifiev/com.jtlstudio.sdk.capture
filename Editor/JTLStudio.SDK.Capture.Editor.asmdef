@@ -1,0 +1,19 @@
+{
+    "name": "JTLStudio.SDK.Capture.Editor",
+    "rootNamespace": "JTLStudio.SDK.Capture",
+    "references": [
+        "JTLStudio.SDK",
+        "JTLStudio.SDK.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
