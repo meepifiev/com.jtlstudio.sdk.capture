@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using UnityEngine;
 
@@ -14,15 +15,17 @@ namespace JTLStudio.SDK.Capture
     {
         [SerializeField] private string _group = "";
         [SerializeField] private string _name = "";
+        [SerializeField] private string _id = "";
         [SerializeField] private int _width = 1920;
         [SerializeField] private int _height = 1080;
         [SerializeField] private CaptureKind _kind = CaptureKind.Screenshot;
         [SerializeField] private bool _enabled = true;
 
-        public CapturePreset(string group, string name, int width, int height, CaptureKind kind)
+        public CapturePreset(string group, string name, string id, int width, int height, CaptureKind kind)
         {
             _group = group;
             _name = name;
+            _id = id;
             _width = width;
             _height = height;
             _kind = kind;
@@ -66,7 +69,13 @@ namespace JTLStudio.SDK.Capture
 
         public string Title => _group + " · " + _name + " · " + _width + "x" + _height;
 
-        public string FileName => Sanitize(_group) + "_" + Sanitize(_name) + "_" + _width + "x" + _height;
+        public string Id
+        {
+            get => _id;
+            set => _id = value;
+        }
+
+        public string FileName => Sanitize(_id) + "_" + _width + "x" + _height;
 
         private string Sanitize(string value)
         {
@@ -81,3 +90,4 @@ namespace JTLStudio.SDK.Capture
         }
     }
 }
+#endif

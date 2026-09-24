@@ -3,6 +3,7 @@
     "rootNamespace": "JTLStudio.SDK.Capture.Tests",
     "references": [
         "JTLStudio.SDK",
+        "JTLStudio.SDK.Capture",
         "JTLStudio.SDK.Capture.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

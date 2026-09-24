@@ -1,14 +1,11 @@
 {
-    "name": "JTLStudio.SDK.Capture.Editor",
+    "name": "JTLStudio.SDK.Capture",
     "rootNamespace": "JTLStudio.SDK.Capture",
     "references": [
         "JTLStudio.SDK",
-        "JTLStudio.SDK.Editor",
-        "JTLStudio.SDK.Capture"
+        "Unity.TextMeshPro"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

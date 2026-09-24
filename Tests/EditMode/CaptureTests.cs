@@ -29,7 +29,7 @@ namespace JTLStudio.SDK.Capture.Tests
         [Test]
         public void PresetSizeIsClamped()
         {
-            CapturePreset preset = new CapturePreset("Тест", "Кадр", 1920, 1080, CaptureKind.Screenshot);
+            CapturePreset preset = new CapturePreset("Тест", "Кадр", "test_frame", 1920, 1080, CaptureKind.Screenshot);
 
             preset.Width = 100000;
             preset.Height = 1;
@@ -41,11 +41,11 @@ namespace JTLStudio.SDK.Capture.Tests
         [Test]
         public void FileNameHasPresetSizeAndLanguage()
         {
-            CapturePreset preset = new CapturePreset(CapturePresets.Yandex, "Обложка", 800, 470, CaptureKind.Screenshot);
+            CapturePreset preset = new CapturePreset(CapturePresets.Yandex, "Обложка", "yandex_cover", 800, 470, CaptureKind.Screenshot);
 
             string name = CaptureOutput.Name(preset, Language.Russian, "png");
 
-            StringAssert.Contains("800x470", name);
+            StringAssert.Contains("yandex_cover_800x470", name);
             StringAssert.Contains("_ru_", name);
             StringAssert.EndsWith(".png", name);
         }

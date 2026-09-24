@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.IO;
 using UnityEditor;
@@ -48,3 +49,4 @@ namespace JTLStudio.SDK.Capture
         }
     }
 }
+#endif
