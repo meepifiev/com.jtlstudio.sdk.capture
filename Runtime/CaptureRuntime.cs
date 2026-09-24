@@ -12,6 +12,9 @@ namespace JTLStudio.SDK.Capture
     {
         private const string NoSwitch = "The language cannot be switched: JTL SDK is not created in this scene. Create the SDK, or assign CaptureLanguages.Switch, or leave one language selected.";
 
+        private const int StartupFrames = 3;
+        private const float StartupSeconds = 10f;
+
         private static CaptureRuntime _instance;
 
         private readonly CaptureScene _scene = new CaptureScene();
@@ -64,12 +67,34 @@ namespace JTLStudio.SDK.Capture
             IsRecording = false;
         }
 
+        public void RunWhenReady()
+        {
+            StartCoroutine(ReadyRoutine());
+        }
+
         public void Toggle()
         {
             if (IsRecording)
             {
                 StopVideo();
                 return;
+            }
+
+            Run();
+        }
+
+        private IEnumerator ReadyRoutine()
+        {
+            for (int frame = 0; frame < StartupFrames; frame++)
+            {
+                yield return null;
+            }
+
+            float deadline = Time.realtimeSinceStartup + StartupSeconds;
+
+            while (JTLSDK.IsCreated && JTLSDK.IsReady == false && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
             }
 
             Run();

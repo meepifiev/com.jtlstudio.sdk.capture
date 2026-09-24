@@ -41,11 +41,13 @@ namespace JTLStudio.SDK.Capture
             Section("Languages", () => DrawLanguages(settings));
             Section("Output", () => DrawOutput(settings));
             Section("Scene", () => DrawScene(settings));
-            EditorGUILayout.Space();
-            DrawButtons(settings);
 
             EditorGUILayout.EndVertical();
             EditorGUILayout.EndScrollView();
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.MaxWidth(ContentWidth));
+            DrawButtons(settings);
+            EditorGUILayout.EndVertical();
             EditorGUIUtility.labelWidth = labelWidth;
             settings.Persist();
         }
@@ -224,13 +226,7 @@ namespace JTLStudio.SDK.Capture
                 return;
             }
 
-            if (Application.isPlaying == false)
-            {
-                EditorGUILayout.HelpBox("Capture runs in Play Mode: enter play, get the game to the right moment and shoot.", MessageType.Info);
-                return;
-            }
-
-            if (CaptureLanguages.Selected().Count > 1 && CaptureLanguages.CanSwitch == false)
+            if (Application.isPlaying && CaptureLanguages.Selected().Count > 1 && CaptureLanguages.CanSwitch == false)
             {
                 EditorGUILayout.HelpBox("JTL SDK is not created in this scene, so the language cannot be switched and every file would repeat one language. Create the SDK, assign CaptureLanguages.Switch or leave one language selected.", MessageType.Warning);
                 return;
@@ -253,15 +249,32 @@ namespace JTLStudio.SDK.Capture
                 {
                     if (GUILayout.Button("Start", GUILayout.Height(30f)))
                     {
-                        CaptureRuntime.Instance.Toggle();
+                        BeginCapture();
                     }
                 }
+            }
+
+            if (Application.isPlaying == false)
+            {
+                EditorGUILayout.LabelField(" ", "Start enters Play Mode and captures as soon as the game runs", EditorStyles.miniLabel);
             }
 
             if (string.IsNullOrEmpty(CaptureRuntime.Status) == false)
             {
                 EditorGUILayout.HelpBox(CaptureRuntime.Status, MessageType.None);
             }
+        }
+
+        private void BeginCapture()
+        {
+            if (Application.isPlaying)
+            {
+                CaptureRuntime.Instance.Toggle();
+                return;
+            }
+
+            CapturePending.Request();
+            EditorApplication.EnterPlaymode();
         }
 
         private string Plan(CaptureSettings settings)
