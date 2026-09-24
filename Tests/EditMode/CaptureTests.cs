@@ -1,3 +1,4 @@
+using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -53,9 +54,71 @@ namespace JTLStudio.SDK.Capture.Tests
         }
 
         [Test]
+        public void ResolvedFolderIsNotCreatedUntilItIsUsed()
+        {
+            CaptureSettings settings = CaptureSettings.instance;
+            string path = settings.OutputPath;
+
+            try
+            {
+                settings.OutputPath = "Captures/JTLSDKTestFolder";
+                string resolved = CaptureOutput.Resolve(settings);
+
+                Assert.IsFalse(Directory.Exists(resolved));
+                Assert.AreEqual(resolved, CaptureOutput.Folder(settings));
+                Assert.IsTrue(Directory.Exists(resolved));
+                Directory.Delete(resolved);
+            }
+            finally
+            {
+                settings.OutputPath = path;
+            }
+        }
+
+        [Test]
+        public void ManualRecordingIsTheDefault()
+        {
+            Assert.AreEqual(RecordMode.Manual, default(RecordMode));
+        }
+
+        [Test]
+        public void RecordingModeIsStored()
+        {
+            CaptureSettings settings = CaptureSettings.instance;
+            RecordMode mode = settings.RecordMode;
+            bool exit = settings.ExitPlayMode;
+
+            try
+            {
+                settings.RecordMode = RecordMode.Duration;
+                settings.ExitPlayMode = true;
+
+                Assert.AreEqual(RecordMode.Duration, settings.RecordMode);
+                Assert.IsTrue(settings.ExitPlayMode);
+            }
+            finally
+            {
+                settings.RecordMode = mode;
+                settings.ExitPlayMode = exit;
+            }
+        }
+
+        [Test]
         public void ConfiguredLanguagesAreNeverEmpty()
         {
             Assert.Greater(CaptureLanguages.Configured().Count, 0);
+        }
+
+        [Test]
+        public void CustomSwitchIsEnoughToSwitchWithoutTheSdk()
+        {
+            Assert.AreEqual(JTLSDK.IsCreated, CaptureLanguages.CanSwitch);
+
+            CaptureLanguages.Switch = language => { };
+
+            Assert.IsTrue(CaptureLanguages.CanSwitch);
+
+            CaptureLanguages.Switch = null;
         }
 
         [Test]

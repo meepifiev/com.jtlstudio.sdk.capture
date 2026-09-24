@@ -17,7 +17,9 @@ namespace JTLStudio.SDK.Capture
         [SerializeField] private bool _everyLanguageOfConfiguration = true;
         [SerializeField] private List<Language> _languages = new List<Language>();
         [SerializeField] private int _frameRate = 30;
+        [SerializeField] private RecordMode _recordMode = RecordMode.Manual;
         [SerializeField] private float _videoSeconds = 15f;
+        [SerializeField] private bool _exitPlayMode;
         [SerializeField] private bool _recordAudio = true;
         [SerializeField] private LayerMask _hiddenLayers;
         [SerializeField] private List<string> _hiddenObjects = new List<string>();
@@ -74,6 +76,18 @@ namespace JTLStudio.SDK.Capture
         {
             get => _frameRate;
             set => _frameRate = Mathf.Clamp(value, 10, 120);
+        }
+
+        public RecordMode RecordMode
+        {
+            get => _recordMode;
+            set => _recordMode = value;
+        }
+
+        public bool ExitPlayMode
+        {
+            get => _exitPlayMode;
+            set => _exitPlayMode = value;
         }
 
         public float VideoSeconds

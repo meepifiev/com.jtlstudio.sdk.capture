@@ -67,6 +67,8 @@ namespace JTLStudio.SDK.Capture
             return selected.Count == 0 ? configured : selected;
         }
 
+        public static bool CanSwitch => Switch != null || JTLSDK.IsCreated;
+
         public static void Apply(Language language)
         {
             if (Switch != null)

@@ -8,7 +8,7 @@ namespace JTLStudio.SDK.Capture
 {
     public static class CaptureOutput
     {
-        public static string Folder(CaptureSettings settings)
+        public static string Resolve(CaptureSettings settings)
         {
             string path = settings.OutputPath;
 
@@ -17,6 +17,12 @@ namespace JTLStudio.SDK.Capture
                 path = Path.Combine(Directory.GetParent(Application.dataPath).FullName, path);
             }
 
+            return path;
+        }
+
+        public static string Folder(CaptureSettings settings)
+        {
+            string path = Resolve(settings);
             Directory.CreateDirectory(path);
             return path;
         }

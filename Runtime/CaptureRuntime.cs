@@ -10,6 +10,8 @@ namespace JTLStudio.SDK.Capture
 {
     public class CaptureRuntime : MonoBehaviour
     {
+        private const string NoSwitch = "The language cannot be switched: JTL SDK is not created in this scene. Create the SDK, or assign CaptureLanguages.Switch, or leave one language selected.";
+
         private static CaptureRuntime _instance;
 
         private readonly CaptureScene _scene = new CaptureScene();
@@ -90,6 +92,13 @@ namespace JTLStudio.SDK.Capture
             List<Language> languages = CaptureLanguages.Selected();
             Vector2Int size = settings.Size;
 
+            if (languages.Count > 1 && CaptureLanguages.CanSwitch == false)
+            {
+                Status = NoSwitch;
+                Debug.LogWarning(NoSwitch);
+                yield break;
+            }
+
             IsBusy = true;
             Language original = JTLSDK.IsCreated ? JTLSDK.Language.Current : languages[0];
             float scale = Time.timeScale;
@@ -138,6 +147,13 @@ namespace JTLStudio.SDK.Capture
             CaptureSettings settings = CaptureSettings.instance;
             List<Language> languages = CaptureLanguages.Selected();
             Vector2Int size = settings.Size;
+
+            if (languages.Count > 1 && CaptureLanguages.CanSwitch == false)
+            {
+                Status = NoSwitch;
+                Debug.LogWarning(NoSwitch);
+                yield break;
+            }
 
             IsBusy = true;
             IsRecording = true;
@@ -191,7 +207,8 @@ namespace JTLStudio.SDK.Capture
                 AudioRenderer.Start();
             }
 
-            int frames = Mathf.RoundToInt(settings.VideoSeconds * settings.FrameRate);
+            bool manual = settings.RecordMode == RecordMode.Manual;
+            int frames = manual ? int.MaxValue : Mathf.RoundToInt(settings.VideoSeconds * settings.FrameRate);
             int written = 0;
 
             for (int frame = 0; frame < frames && IsRecording; frame++)
@@ -238,7 +255,9 @@ namespace JTLStudio.SDK.Capture
                 }
 
                 written++;
-                Status = "Recorded " + written + " of " + frames + " frames";
+                Status = manual
+                    ? "Recording, " + written + " frames, press Stop when ready"
+                    : "Recorded " + written + " of " + frames + " frames";
             }
 
             if (settings.RecordAudio)
@@ -260,6 +279,11 @@ namespace JTLStudio.SDK.Capture
             IsBusy = false;
             Status = "Done: " + languages.Count + " videos " + size.x + "x" + size.y + ", " + written + " frames each, in " + folder;
             CaptureOutput.Reveal(folder);
+
+            if (settings.ExitPlayMode)
+            {
+                UnityEditor.EditorApplication.isPlaying = false;
+            }
         }
     }
 }

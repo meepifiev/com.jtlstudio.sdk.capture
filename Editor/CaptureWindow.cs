@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -6,8 +7,9 @@ namespace JTLStudio.SDK.Capture
 {
     public class CaptureWindow : EditorWindow
     {
-        private const float ContentWidth = 460f;
-        private const float LabelWidth = 150f;
+        private const float ContentWidth = 470f;
+        private const float LabelWidth = 145f;
+        private const float ButtonWidth = 74f;
 
         private string _newObject = "";
         private Vector2 _scroll;
@@ -17,7 +19,7 @@ namespace JTLStudio.SDK.Capture
         {
             CaptureWindow window = GetWindow<CaptureWindow>();
             window.titleContent = new GUIContent("Capture");
-            window.minSize = new Vector2(420f, 400f);
+            window.minSize = new Vector2(430f, 420f);
             window.Show();
         }
 
@@ -34,11 +36,11 @@ namespace JTLStudio.SDK.Capture
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
             EditorGUILayout.BeginVertical(GUILayout.MaxWidth(ContentWidth));
 
-            DrawSource(settings);
-            DrawResolution(settings);
-            DrawLanguages(settings);
-            DrawSettings(settings);
-            DrawHiddenObjects(settings);
+            Section("Capture", () => DrawSource(settings));
+            Section("Format", () => DrawFormat(settings));
+            Section("Languages", () => DrawLanguages(settings));
+            Section("Output", () => DrawOutput(settings));
+            Section("Scene", () => DrawScene(settings));
             EditorGUILayout.Space();
             DrawButtons(settings);
 
@@ -48,9 +50,17 @@ namespace JTLStudio.SDK.Capture
             settings.Persist();
         }
 
+        private void Section(string title, System.Action body)
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            body();
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(2f);
+        }
+
         private void DrawSource(CaptureSettings settings)
         {
-            EditorGUILayout.LabelField("Source", EditorStyles.boldLabel);
             settings.Source = (CaptureSource)EditorGUILayout.EnumPopup("Capture from", settings.Source);
 
             if (settings.Source == CaptureSource.GameView)
@@ -72,15 +82,10 @@ namespace JTLStudio.SDK.Capture
             index = EditorGUILayout.Popup("Camera", index, cameras.ToArray());
             settings.CameraName = cameras[index];
             settings.IncludeOverlayUi = EditorGUILayout.Toggle("Include overlay UI", settings.IncludeOverlayUi);
-            EditorGUILayout.LabelField(" ", settings.IncludeOverlayUi
-                ? "Overlay canvases render through this camera while capturing"
-                : "Camera render only, Screen Space Overlay UI stays out", EditorStyles.miniLabel);
         }
 
-        private void DrawResolution(CaptureSettings settings)
+        private void DrawFormat(CaptureSettings settings)
         {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Resolution", EditorStyles.boldLabel);
             settings.ResolutionIndex = EditorGUILayout.Popup("Frame size", settings.ResolutionIndex, CaptureResolutions.Labels);
 
             if (settings.ResolutionIndex == CaptureResolutions.CustomIndex)
@@ -94,14 +99,24 @@ namespace JTLStudio.SDK.Capture
                 settings.CustomSize = new Vector2Int(width, height);
             }
 
-            Vector2Int size = settings.Size;
-            EditorGUILayout.LabelField(" ", "Capturing " + size.x + " x " + size.y, EditorStyles.miniLabel);
+            settings.FrameRate = EditorGUILayout.IntSlider("Frame rate", settings.FrameRate, 10, 120);
+            settings.RecordMode = (RecordMode)EditorGUILayout.EnumPopup("Recording mode", settings.RecordMode);
+
+            if (settings.RecordMode == RecordMode.Duration)
+            {
+                settings.VideoSeconds = EditorGUILayout.Slider("Video length, s", settings.VideoSeconds, 1f, 120f);
+            }
+            else
+            {
+                EditorGUILayout.LabelField(" ", "Recording runs until you press Stop", EditorStyles.miniLabel);
+            }
+
+            settings.RecordAudio = EditorGUILayout.Toggle("Record audio", settings.RecordAudio);
+            settings.ExitPlayMode = EditorGUILayout.Toggle("Exit Play Mode after", settings.ExitPlayMode);
         }
 
         private void DrawLanguages(CaptureSettings settings)
         {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Languages", EditorStyles.boldLabel);
             settings.EveryLanguageOfConfiguration = EditorGUILayout.ToggleLeft("Every language of the active configuration", settings.EveryLanguageOfConfiguration);
 
             if (settings.EveryLanguageOfConfiguration == false)
@@ -130,70 +145,47 @@ namespace JTLStudio.SDK.Capture
             EditorGUILayout.LabelField(" ", string.Join(", ", CaptureLanguages.Selected()), EditorStyles.miniLabel);
         }
 
-        private void DrawSettings(CaptureSettings settings)
+        private void DrawOutput(CaptureSettings settings)
         {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
-            settings.OutputPath = EditorGUILayout.TextField("Output folder", settings.OutputPath);
-            settings.FrameRate = EditorGUILayout.IntSlider("Frame rate", settings.FrameRate, 10, 120);
-            settings.VideoSeconds = EditorGUILayout.Slider("Video length, s", settings.VideoSeconds, 1f, 120f);
-            settings.RecordAudio = EditorGUILayout.Toggle("Record audio", settings.RecordAudio);
+            EditorGUILayout.BeginHorizontal();
+            settings.OutputPath = EditorGUILayout.TextField("Folder", settings.OutputPath);
+
+            if (GUILayout.Button("Browse", GUILayout.Width(ButtonWidth)))
+            {
+                string picked = EditorUtility.OpenFolderPanel("Capture output", CaptureOutput.Resolve(settings), "");
+
+                if (string.IsNullOrEmpty(picked) == false)
+                {
+                    settings.OutputPath = Relative(picked);
+                    GUIUtility.ExitGUI();
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(" ", CaptureOutput.Resolve(settings), EditorStyles.miniLabel);
+
+            if (GUILayout.Button("Open", GUILayout.Width(ButtonWidth)))
+            {
+                CaptureOutput.Reveal(CaptureOutput.Folder(settings));
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawScene(CaptureSettings settings)
+        {
             settings.HiddenLayers = EditorGUILayout.MaskField("Hide layers", settings.HiddenLayers, UnityEditorInternal.InternalEditorUtility.layers);
             settings.ScreenshotKey = (KeyCode)EditorGUILayout.EnumPopup("Screenshot key", settings.ScreenshotKey);
             settings.VideoKey = (KeyCode)EditorGUILayout.EnumPopup("Record key", settings.VideoKey);
-        }
-
-        private void DrawButtons(CaptureSettings settings)
-        {
-            if (Application.isPlaying == false)
-            {
-                EditorGUILayout.HelpBox("Capture runs in Play Mode: enter play, get the game to the right moment and shoot.", MessageType.Info);
-                return;
-            }
-
-            using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
-            {
-                if (GUILayout.Button("Capture frame in every language", GUILayout.Height(28f)))
-                {
-                    CaptureRuntime.Instance.TakeScreenshots();
-                }
-            }
-
-            if (CaptureRuntime.IsRecording)
-            {
-                if (GUILayout.Button("Stop recording", GUILayout.Height(28f)))
-                {
-                    CaptureRuntime.Instance.StopVideo();
-                }
-            }
-            else
-            {
-                using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
-                {
-                    if (GUILayout.Button("Record video in every language", GUILayout.Height(28f)))
-                    {
-                        CaptureRuntime.Instance.StartVideo();
-                    }
-                }
-            }
-
-            if (string.IsNullOrEmpty(CaptureRuntime.Status) == false)
-            {
-                EditorGUILayout.HelpBox(CaptureRuntime.Status, MessageType.None);
-            }
-        }
-
-        private void DrawHiddenObjects(CaptureSettings settings)
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Hide objects by name", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Hide objects by name", EditorStyles.miniBoldLabel);
 
             for (int index = 0; index < settings.HiddenObjects.Count; index++)
             {
                 EditorGUILayout.BeginHorizontal();
                 settings.HiddenObjects[index] = EditorGUILayout.TextField(settings.HiddenObjects[index]);
 
-                if (GUILayout.Button("Remove", GUILayout.Width(70f)))
+                if (GUILayout.Button("Remove", GUILayout.Width(ButtonWidth)))
                 {
                     settings.HiddenObjects.RemoveAt(index);
                     EditorGUILayout.EndHorizontal();
@@ -206,13 +198,72 @@ namespace JTLStudio.SDK.Capture
             EditorGUILayout.BeginHorizontal();
             _newObject = EditorGUILayout.TextField(_newObject);
 
-            if (GUILayout.Button("Add", GUILayout.Width(70f)) && string.IsNullOrWhiteSpace(_newObject) == false)
+            if (GUILayout.Button("Add", GUILayout.Width(ButtonWidth)) && string.IsNullOrWhiteSpace(_newObject) == false)
             {
                 settings.HiddenObjects.Add(_newObject.Trim());
                 _newObject = "";
             }
 
             EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawButtons(CaptureSettings settings)
+        {
+            Vector2Int size = settings.Size;
+            EditorGUILayout.LabelField("Capturing " + size.x + " x " + size.y + " in " + CaptureLanguages.Selected().Count + " languages", EditorStyles.miniLabel);
+
+            if (Application.isPlaying == false)
+            {
+                EditorGUILayout.HelpBox("Capture runs in Play Mode: enter play, get the game to the right moment and shoot.", MessageType.Info);
+                return;
+            }
+
+            if (CaptureLanguages.Selected().Count > 1 && CaptureLanguages.CanSwitch == false)
+            {
+                EditorGUILayout.HelpBox("JTL SDK is not created in this scene, so the language cannot be switched and every file would repeat one language. Create the SDK, assign CaptureLanguages.Switch or leave one language selected.", MessageType.Warning);
+                return;
+            }
+
+            using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
+            {
+                if (GUILayout.Button("Capture frame in every language", GUILayout.Height(30f)))
+                {
+                    CaptureRuntime.Instance.TakeScreenshots();
+                }
+            }
+
+            if (CaptureRuntime.IsRecording)
+            {
+                GUI.backgroundColor = new Color(1f, 0.45f, 0.4f);
+
+                if (GUILayout.Button("Stop recording", GUILayout.Height(30f)))
+                {
+                    CaptureRuntime.Instance.StopVideo();
+                }
+
+                GUI.backgroundColor = Color.white;
+            }
+            else
+            {
+                using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
+                {
+                    if (GUILayout.Button("Record video in every language", GUILayout.Height(30f)))
+                    {
+                        CaptureRuntime.Instance.StartVideo();
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(CaptureRuntime.Status) == false)
+            {
+                EditorGUILayout.HelpBox(CaptureRuntime.Status, MessageType.None);
+            }
+        }
+
+        private string Relative(string path)
+        {
+            string root = Directory.GetParent(Application.dataPath).FullName;
+            return path.StartsWith(root) ? path.Substring(root.Length).TrimStart('/', '\\') : path;
         }
 
         private List<string> CameraNames()
