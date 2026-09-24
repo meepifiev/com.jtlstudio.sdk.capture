@@ -8,6 +8,11 @@ namespace JTLStudio.SDK.Capture
     {
         public static Texture2D Fit(Texture2D source, int width, int height)
         {
+            if (source == null)
+            {
+                return null;
+            }
+
             if (source.width == width && source.height == height)
             {
                 return source;

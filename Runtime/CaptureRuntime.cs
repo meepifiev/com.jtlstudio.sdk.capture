@@ -19,6 +19,11 @@ namespace JTLStudio.SDK.Capture
 
         private readonly CaptureScene _scene = new CaptureScene();
         private readonly CaptureCanvases _canvases = new CaptureCanvases();
+        private readonly List<MediaEncoder> _encoders = new List<MediaEncoder>();
+        private readonly List<string> _videos = new List<string>();
+
+        private float _captureDelta;
+        private bool _audioStarted;
 
         public static bool IsRecording { get; private set; }
         public static bool IsBusy { get; private set; }
@@ -63,6 +68,11 @@ namespace JTLStudio.SDK.Capture
         }
 
         public void StopVideo()
+        {
+            IsRecording = false;
+        }
+
+        public static void Cancel()
         {
             IsRecording = false;
         }
@@ -112,6 +122,11 @@ namespace JTLStudio.SDK.Capture
                 Status = NoSwitch;
                 Debug.LogWarning(NoSwitch);
                 return;
+            }
+
+            if (CaptureSettings.instance.Source == CaptureSource.GameView)
+            {
+                UnityEditor.EditorApplication.ExecuteMenuItem("Window/General/Game");
             }
 
             StartCoroutine(Sequence(screenshots, video));
@@ -178,6 +193,12 @@ namespace JTLStudio.SDK.Capture
                 yield return new WaitForEndOfFrame();
 
                 Texture2D shot = CaptureFrame.Grab(settings, size);
+
+                if (shot == null)
+                {
+                    break;
+                }
+
                 CaptureImage.WritePng(shot, Path.Combine(folder, CaptureOutput.Name(size, language, "png")));
                 DestroyImmediate(shot);
                 saved++;
@@ -190,8 +211,21 @@ namespace JTLStudio.SDK.Capture
             _scene.Restore();
             Time.timeScale = scale;
             IsBusy = false;
-            Status = "Done: " + saved + " frames " + size.x + "x" + size.y + " in " + folder;
-            CaptureOutput.Reveal(folder);
+
+            if (saved < languages.Count)
+            {
+                Status = "The Game View stopped rendering: " + saved + " of " + languages.Count + " frames are saved.";
+                Debug.LogWarning(Status);
+            }
+            else
+            {
+                Status = "Done: " + saved + " frames " + size.x + "x" + size.y + " in " + folder;
+            }
+
+            if (saved > 0)
+            {
+                CaptureOutput.Reveal(folder);
+            }
         }
 
         private IEnumerator VideoRoutine()
@@ -219,8 +253,6 @@ namespace JTLStudio.SDK.Capture
             yield return new WaitForEndOfFrame();
 
             string folder = CaptureOutput.Folder(settings);
-            Directory.CreateDirectory(folder);
-            List<MediaEncoder> encoders = new List<MediaEncoder>();
             VideoTrackAttributes video = new VideoTrackAttributes
             {
                 frameRate = new MediaRational(settings.FrameRate),
@@ -239,91 +271,163 @@ namespace JTLStudio.SDK.Capture
             foreach (Language language in languages)
             {
                 string path = Path.Combine(folder, CaptureOutput.Name(size, language, "mp4"));
-                encoders.Add(settings.RecordAudio
+                _videos.Add(path);
+                _encoders.Add(settings.RecordAudio
                     ? new MediaEncoder(path, video, audio)
                     : new MediaEncoder(path, video));
             }
 
-            float capture = Time.captureDeltaTime;
+            _captureDelta = Time.captureDeltaTime;
             Time.captureDeltaTime = 1f / (settings.FrameRate * languages.Count);
 
             if (settings.RecordAudio)
             {
                 AudioRenderer.Start();
+                _audioStarted = true;
             }
 
             bool manual = settings.RecordMode == RecordMode.Manual;
             int frames = manual ? int.MaxValue : Mathf.RoundToInt(settings.VideoSeconds * settings.FrameRate);
             int written = 0;
+            bool lost = false;
 
-            for (int frame = 0; frame < frames && IsRecording; frame++)
+            try
             {
-                NativeArray<float> samples = default;
-                int sampleCount = 0;
-
-                for (int index = 0; index < languages.Count; index++)
+                for (int frame = 0; frame < frames && IsRecording && lost == false; frame++)
                 {
-                    CaptureLanguages.Apply(languages[index]);
-                    yield return new WaitForEndOfFrame();
+                    NativeArray<float> samples = default;
+                    int sampleCount = 0;
 
-                    Texture2D picture = CaptureFrame.Grab(settings, size);
-                    encoders[index].AddFrame(picture);
-                    DestroyImmediate(picture);
-
-                    if (settings.RecordAudio)
+                    for (int index = 0; index < languages.Count; index++)
                     {
-                        int count = AudioRenderer.GetSampleCountForCaptureFrame();
-                        NativeArray<float> part = new NativeArray<float>(count * 2, Allocator.Temp);
-                        AudioRenderer.Render(part);
+                        CaptureLanguages.Apply(languages[index]);
+                        yield return new WaitForEndOfFrame();
 
-                        if (index == 0)
+                        Texture2D picture = CaptureFrame.Grab(settings, size);
+
+                        if (picture == null)
                         {
-                            samples = new NativeArray<float>(part.Length * languages.Count, Allocator.Temp);
+                            lost = true;
+                            break;
                         }
 
-                        NativeArray<float>.Copy(part, 0, samples, sampleCount, part.Length);
-                        sampleCount += part.Length;
-                        part.Dispose();
+                        _encoders[index].AddFrame(picture);
+                        DestroyImmediate(picture);
+
+                        if (settings.RecordAudio)
+                        {
+                            int count = AudioRenderer.GetSampleCountForCaptureFrame();
+                            NativeArray<float> part = new NativeArray<float>(count * 2, Allocator.Temp);
+                            AudioRenderer.Render(part);
+
+                            if (index == 0)
+                            {
+                                samples = new NativeArray<float>(part.Length * languages.Count, Allocator.Temp);
+                            }
+
+                            NativeArray<float>.Copy(part, 0, samples, sampleCount, part.Length);
+                            sampleCount += part.Length;
+                            part.Dispose();
+                        }
                     }
-                }
 
-                if (settings.RecordAudio && samples.IsCreated)
-                {
-                    NativeArray<float> mixed = samples.GetSubArray(0, sampleCount);
-
-                    foreach (MediaEncoder encoder in encoders)
+                    if (settings.RecordAudio && samples.IsCreated)
                     {
-                        encoder.AddSamples(mixed);
+                        if (lost == false)
+                        {
+                            NativeArray<float> mixed = samples.GetSubArray(0, sampleCount);
+
+                            foreach (MediaEncoder encoder in _encoders)
+                            {
+                                encoder.AddSamples(mixed);
+                            }
+                        }
+
+                        samples.Dispose();
                     }
 
-                    samples.Dispose();
+                    if (lost)
+                    {
+                        break;
+                    }
+
+                    written++;
+                    Status = manual
+                        ? "Recording, " + written + " frames, press Stop when ready"
+                        : "Recorded " + written + " of " + frames + " frames";
                 }
-
-                written++;
-                Status = manual
-                    ? "Recording, " + written + " frames, press Stop when ready"
-                    : "Recorded " + written + " of " + frames + " frames";
             }
-
-            if (settings.RecordAudio)
+            finally
             {
-                AudioRenderer.Stop();
+                Finish(written == 0);
             }
 
-            foreach (MediaEncoder encoder in encoders)
-            {
-                encoder.Dispose();
-            }
-
-            Time.captureDeltaTime = capture;
             GameViewResolution.Restore();
             _canvases.Restore();
             CaptureLanguages.Apply(original);
             _scene.Restore();
+
+            if (lost)
+            {
+                Status = written == 0
+                    ? "The Game View stopped rendering before a single frame was written, nothing is saved."
+                    : "Play Mode ended during the recording: " + written + " frames are saved in " + folder;
+                Debug.LogWarning(Status);
+            }
+            else
+            {
+                Status = "Done: " + languages.Count + " videos " + size.x + "x" + size.y + ", " + written + " frames each, in " + folder;
+            }
+
+            if (written > 0)
+            {
+                CaptureOutput.Reveal(folder);
+            }
+        }
+
+        private void OnDisable()
+        {
+            Finish(false);
+        }
+
+        private void Finish(bool discard)
+        {
+            if (_audioStarted)
+            {
+                _audioStarted = false;
+
+                if (Application.isPlaying)
+                {
+                    AudioRenderer.Stop();
+                }
+            }
+
+            foreach (MediaEncoder encoder in _encoders)
+            {
+                encoder.Dispose();
+            }
+
+            if (_encoders.Count > 0)
+            {
+                Time.captureDeltaTime = _captureDelta;
+            }
+
+            _encoders.Clear();
+
+            if (discard)
+            {
+                foreach (string path in _videos)
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+                }
+            }
+
+            _videos.Clear();
             IsRecording = false;
             IsBusy = false;
-            Status = "Done: " + languages.Count + " videos " + size.x + "x" + size.y + ", " + written + " frames each, in " + folder;
-            CaptureOutput.Reveal(folder);
         }
     }
 }

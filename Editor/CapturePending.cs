@@ -22,6 +22,7 @@ namespace JTLStudio.SDK.Capture
             if (change == PlayModeStateChange.ExitingPlayMode)
             {
                 SessionState.SetBool(Key, false);
+                CaptureRuntime.Cancel();
                 return;
             }
 

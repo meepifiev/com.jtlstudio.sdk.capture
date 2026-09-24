@@ -33,10 +33,15 @@ namespace JTLStudio.SDK.Capture
                 }
             }
 
+            if (Application.isPlaying == false || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode == false)
+            {
+                return null;
+            }
+
             Texture2D screen = ScreenCapture.CaptureScreenshotAsTexture();
             Texture2D fitted = CaptureImage.Fit(screen, size.x, size.y);
 
-            if (fitted != screen)
+            if (fitted != screen && screen != null)
             {
                 Object.DestroyImmediate(screen);
             }

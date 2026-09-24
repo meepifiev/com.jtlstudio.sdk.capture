@@ -131,6 +131,12 @@ namespace JTLStudio.SDK.Capture.Tests
         }
 
         [Test]
+        public void MissingFrameIsNotAnException()
+        {
+            Assert.IsNull(CaptureImage.Fit(null, 100, 100));
+        }
+
+        [Test]
         public void ConfiguredLanguagesAreNeverEmpty()
         {
             Assert.Greater(CaptureLanguages.Configured().Count, 0);
