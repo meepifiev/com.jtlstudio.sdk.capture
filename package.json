@@ -1,7 +1,7 @@
 {
   "name": "com.jtlstudio.sdk.capture",
   "displayName": "JTL SDK Capture",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "unity": "2021.3",
   "description": "Screenshots and video for store pages: pick a resolution, one pass captures every language of the active configuration.",
   "author": {

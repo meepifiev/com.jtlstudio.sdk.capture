@@ -221,11 +221,6 @@ namespace JTLStudio.SDK.Capture
             {
                 Status = "Done: " + saved + " frames " + size.x + "x" + size.y + " in " + folder;
             }
-
-            if (saved > 0)
-            {
-                CaptureOutput.Reveal(folder);
-            }
         }
 
         private IEnumerator VideoRoutine()
@@ -377,11 +372,6 @@ namespace JTLStudio.SDK.Capture
             else
             {
                 Status = "Done: " + languages.Count + " videos " + size.x + "x" + size.y + ", " + written + " frames each, in " + folder;
-            }
-
-            if (written > 0)
-            {
-                CaptureOutput.Reveal(folder);
             }
         }
 
