@@ -15,12 +15,10 @@ namespace JTLStudio.SDK.Capture
         {
             return new List<CapturePreset>
             {
-                new CapturePreset(Yandex, "Обложка", "yandex_cover", 800, 470, CaptureKind.Screenshot),
                 new CapturePreset(Yandex, "Скриншот горизонтальный", "yandex_landscape", 1920, 1080, CaptureKind.Screenshot),
                 new CapturePreset(Yandex, "Скриншот вертикальный", "yandex_portrait", 1080, 1920, CaptureKind.Screenshot),
                 new CapturePreset(Yandex, "Ролик", "yandex_video", 1920, 1080, CaptureKind.Video),
                 new CapturePreset(YouTube, "Скриншот", "youtube_landscape", 1920, 1080, CaptureKind.Screenshot),
-                new CapturePreset(GooglePlay, "Баннер магазина", "googleplay_feature", 1024, 500, CaptureKind.Screenshot),
                 new CapturePreset(GooglePlay, "Телефон", "googleplay_phone", 1080, 1920, CaptureKind.Screenshot),
                 new CapturePreset(GooglePlay, "Планшет", "googleplay_tablet", 1600, 2560, CaptureKind.Screenshot),
                 new CapturePreset(GooglePlay, "Ролик", "googleplay_video", 1920, 1080, CaptureKind.Video),

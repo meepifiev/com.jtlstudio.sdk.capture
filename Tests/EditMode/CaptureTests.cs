@@ -27,6 +27,16 @@ namespace JTLStudio.SDK.Capture.Tests
         }
 
         [Test]
+        public void DefaultsHaveNoPromoBanners()
+        {
+            foreach (CapturePreset preset in CapturePresets.Defaults())
+            {
+                Assert.AreNotEqual(470, preset.Height, preset.Name);
+                Assert.AreNotEqual(500, preset.Height, preset.Name);
+            }
+        }
+
+        [Test]
         public void PresetSizeIsClamped()
         {
             CapturePreset preset = new CapturePreset("Тест", "Кадр", "test_frame", 1920, 1080, CaptureKind.Screenshot);
@@ -41,11 +51,11 @@ namespace JTLStudio.SDK.Capture.Tests
         [Test]
         public void FileNameHasPresetSizeAndLanguage()
         {
-            CapturePreset preset = new CapturePreset(CapturePresets.Yandex, "Обложка", "yandex_cover", 800, 470, CaptureKind.Screenshot);
+            CapturePreset preset = new CapturePreset(CapturePresets.Yandex, "Скриншот", "yandex_landscape", 1920, 1080, CaptureKind.Screenshot);
 
             string name = CaptureOutput.Name(preset, Language.Russian, "png");
 
-            StringAssert.Contains("yandex_cover_800x470", name);
+            StringAssert.Contains("yandexlandscape_1920x1080", name);
             StringAssert.Contains("_ru_", name);
             StringAssert.EndsWith(".png", name);
         }
