@@ -183,8 +183,7 @@ namespace JTLStudio.SDK.Capture
         private void DrawScene(CaptureSettings settings)
         {
             settings.HiddenLayers = EditorGUILayout.MaskField("Hide layers", settings.HiddenLayers, UnityEditorInternal.InternalEditorUtility.layers);
-            settings.ScreenshotKey = (KeyCode)EditorGUILayout.EnumPopup("Screenshot key", settings.ScreenshotKey);
-            settings.VideoKey = (KeyCode)EditorGUILayout.EnumPopup("Record key", settings.VideoKey);
+            settings.CaptureKey = (KeyCode)EditorGUILayout.EnumPopup("Start and stop key", settings.CaptureKey);
             EditorGUILayout.LabelField("Hide objects by name", EditorStyles.miniBoldLabel);
 
             for (int index = 0; index < settings.HiddenObjects.Count; index++)
@@ -217,7 +216,7 @@ namespace JTLStudio.SDK.Capture
         private void DrawButtons(CaptureSettings settings)
         {
             Vector2Int size = settings.Size;
-            EditorGUILayout.LabelField(Plan(settings) + " " + size.x + " x " + size.y + " in " + CaptureLanguages.Selected().Count + " languages", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(Plan(settings) + ", " + size.x + " x " + size.y + ", " + CaptureLanguages.Selected().Count + " languages", EditorStyles.miniLabel);
 
             if (settings.TakeScreenshots == false && settings.RecordVideo == false)
             {
@@ -241,9 +240,9 @@ namespace JTLStudio.SDK.Capture
             {
                 GUI.backgroundColor = new Color(1f, 0.45f, 0.4f);
 
-                if (GUILayout.Button("Stop recording", GUILayout.Height(30f)))
+                if (GUILayout.Button("Stop", GUILayout.Height(30f)))
                 {
-                    CaptureRuntime.Instance.StopVideo();
+                    CaptureRuntime.Instance.Toggle();
                 }
 
                 GUI.backgroundColor = Color.white;
@@ -252,9 +251,9 @@ namespace JTLStudio.SDK.Capture
             {
                 using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
                 {
-                    if (GUILayout.Button(Action(settings), GUILayout.Height(30f)))
+                    if (GUILayout.Button("Start", GUILayout.Height(30f)))
                     {
-                        CaptureRuntime.Instance.Run();
+                        CaptureRuntime.Instance.Toggle();
                     }
                 }
             }
@@ -269,20 +268,10 @@ namespace JTLStudio.SDK.Capture
         {
             if (settings.TakeScreenshots && settings.RecordVideo)
             {
-                return "Screenshots and video";
+                return "One screenshot per language, then video";
             }
 
-            return settings.RecordVideo ? "Video" : "Screenshots";
-        }
-
-        private string Action(CaptureSettings settings)
-        {
-            if (settings.TakeScreenshots && settings.RecordVideo)
-            {
-                return "Capture screenshots, then record video";
-            }
-
-            return settings.RecordVideo ? "Record video in every language" : "Capture screenshots in every language";
+            return settings.RecordVideo ? "Video" : "One screenshot per language";
         }
 
         private string Relative(string path)

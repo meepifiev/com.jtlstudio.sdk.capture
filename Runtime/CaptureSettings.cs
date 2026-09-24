@@ -25,8 +25,7 @@ namespace JTLStudio.SDK.Capture
         [SerializeField] private bool _recordAudio = true;
         [SerializeField] private LayerMask _hiddenLayers;
         [SerializeField] private List<string> _hiddenObjects = new List<string>();
-        [SerializeField] private KeyCode _screenshotKey = KeyCode.F9;
-        [SerializeField] private KeyCode _videoKey = KeyCode.F10;
+        [SerializeField] private KeyCode _captureKey = KeyCode.F9;
 
         public string OutputPath
         {
@@ -124,16 +123,10 @@ namespace JTLStudio.SDK.Capture
 
         public List<string> HiddenObjects => _hiddenObjects;
 
-        public KeyCode ScreenshotKey
+        public KeyCode CaptureKey
         {
-            get => _screenshotKey;
-            set => _screenshotKey = value;
-        }
-
-        public KeyCode VideoKey
-        {
-            get => _videoKey;
-            set => _videoKey = value;
+            get => _captureKey;
+            set => _captureKey = value;
         }
 
         public void Persist()

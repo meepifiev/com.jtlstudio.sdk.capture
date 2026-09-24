@@ -64,6 +64,17 @@ namespace JTLStudio.SDK.Capture
             IsRecording = false;
         }
 
+        public void Toggle()
+        {
+            if (IsRecording)
+            {
+                StopVideo();
+                return;
+            }
+
+            Run();
+        }
+
         private void Begin(bool screenshots, bool video)
         {
             if (IsBusy || (screenshots == false && video == false))
@@ -103,21 +114,9 @@ namespace JTLStudio.SDK.Capture
         {
             CaptureSettings settings = CaptureSettings.instance;
 
-            if (Input.GetKeyDown(settings.ScreenshotKey))
+            if (Input.GetKeyDown(settings.CaptureKey))
             {
-                TakeScreenshots();
-            }
-
-            if (Input.GetKeyDown(settings.VideoKey))
-            {
-                if (IsRecording)
-                {
-                    StopVideo();
-                }
-                else
-                {
-                    StartVideo();
-                }
+                Toggle();
             }
         }
 
