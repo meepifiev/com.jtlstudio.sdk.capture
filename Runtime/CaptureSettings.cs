@@ -9,7 +9,8 @@ namespace JTLStudio.SDK.Capture
     public class CaptureSettings : ScriptableSingleton<CaptureSettings>
     {
         [SerializeField] private string _outputPath = "Captures";
-        [SerializeField] private List<CapturePreset> _presets = new List<CapturePreset>();
+        [SerializeField] private int _resolutionIndex;
+        [SerializeField] private Vector2Int _customSize = new Vector2Int(1920, 1080);
         [SerializeField] private bool _everyLanguageOfConfiguration = true;
         [SerializeField] private List<Language> _languages = new List<Language>();
         [SerializeField] private int _frameRate = 30;
@@ -19,7 +20,6 @@ namespace JTLStudio.SDK.Capture
         [SerializeField] private List<string> _hiddenObjects = new List<string>();
         [SerializeField] private KeyCode _screenshotKey = KeyCode.F9;
         [SerializeField] private KeyCode _videoKey = KeyCode.F10;
-        [SerializeField] private bool _presetsCreated;
 
         public string OutputPath
         {
@@ -27,20 +27,19 @@ namespace JTLStudio.SDK.Capture
             set => _outputPath = string.IsNullOrWhiteSpace(value) ? "Captures" : value.Trim();
         }
 
-        public List<CapturePreset> Presets
+        public int ResolutionIndex
         {
-            get
-            {
-                if (_presetsCreated == false)
-                {
-                    _presetsCreated = true;
-                    _presets = CapturePresets.Defaults();
-                    Persist();
-                }
-
-                return _presets;
-            }
+            get => Mathf.Clamp(_resolutionIndex, 0, CaptureResolutions.CustomIndex);
+            set => _resolutionIndex = Mathf.Clamp(value, 0, CaptureResolutions.CustomIndex);
         }
+
+        public Vector2Int CustomSize
+        {
+            get => _customSize;
+            set => _customSize = new Vector2Int(Mathf.Clamp(value.x, 16, 8192), Mathf.Clamp(value.y, 16, 8192));
+        }
+
+        public Vector2Int Size => CaptureResolutions.Size(ResolutionIndex, CustomSize);
 
         public bool EveryLanguageOfConfiguration
         {
@@ -91,13 +90,6 @@ namespace JTLStudio.SDK.Capture
         public void Persist()
         {
             Save(true);
-        }
-
-        public void ResetPresets()
-        {
-            _presets = CapturePresets.Defaults();
-            _presetsCreated = true;
-            Persist();
         }
     }
 }

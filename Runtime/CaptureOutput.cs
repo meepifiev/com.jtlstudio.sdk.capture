@@ -21,11 +21,11 @@ namespace JTLStudio.SDK.Capture
             return path;
         }
 
-        public static string Name(CapturePreset preset, Language language, string extension)
+        public static string Name(Vector2Int size, Language language, string extension)
         {
             string product = Sanitize(Application.productName);
             string stamp = DateTime.Now.ToString("MMdd_HHmmss");
-            return product + "_" + preset.FileName + "_" + CaptureLanguages.Code(language) + "_" + stamp + "." + extension;
+            return product + "_" + size.x + "x" + size.y + "_" + CaptureLanguages.Code(language) + "_" + stamp + "." + extension;
         }
 
         public static void Reveal(string folder)

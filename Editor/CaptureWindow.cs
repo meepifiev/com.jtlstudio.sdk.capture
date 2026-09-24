@@ -6,7 +6,6 @@ namespace JTLStudio.SDK.Capture
 {
     public class CaptureWindow : EditorWindow
     {
-        private Vector2 _scroll;
         private string _newObject = "";
 
         [MenuItem("JTL SDK/Capture", false, 11)]
@@ -14,7 +13,7 @@ namespace JTLStudio.SDK.Capture
         {
             CaptureWindow window = GetWindow<CaptureWindow>();
             window.titleContent = new GUIContent("Capture");
-            window.minSize = new Vector2(460f, 420f);
+            window.minSize = new Vector2(420f, 380f);
             window.Show();
         }
 
@@ -28,73 +27,57 @@ namespace JTLStudio.SDK.Capture
             CaptureSettings settings = CaptureSettings.instance;
             List<Language> languages = CaptureLanguages.Selected();
 
-            EditorGUILayout.LabelField("Языки съёмки", EditorStyles.boldLabel);
-            settings.EveryLanguageOfConfiguration = EditorGUILayout.ToggleLeft("Все языки активной конфигурации", settings.EveryLanguageOfConfiguration);
+            EditorGUILayout.LabelField("Resolution", EditorStyles.boldLabel);
+            settings.ResolutionIndex = EditorGUILayout.Popup("Frame size", settings.ResolutionIndex, CaptureResolutions.Labels);
+
+            if (settings.ResolutionIndex == CaptureResolutions.CustomIndex)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PrefixLabel("Custom size");
+                int width = EditorGUILayout.IntField(settings.CustomSize.x, GUILayout.Width(70f));
+                EditorGUILayout.LabelField("x", GUILayout.Width(12f));
+                int height = EditorGUILayout.IntField(settings.CustomSize.y, GUILayout.Width(70f));
+                EditorGUILayout.EndHorizontal();
+                settings.CustomSize = new Vector2Int(width, height);
+            }
+
+            Vector2Int size = settings.Size;
+            EditorGUILayout.LabelField(" ", "Capturing " + size.x + " x " + size.y, EditorStyles.miniLabel);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Languages", EditorStyles.boldLabel);
+            settings.EveryLanguageOfConfiguration = EditorGUILayout.ToggleLeft("Every language of the active configuration", settings.EveryLanguageOfConfiguration);
 
             if (settings.EveryLanguageOfConfiguration == false)
             {
                 DrawLanguagePicker(settings);
             }
 
-            EditorGUILayout.LabelField("Снимаем на: " + string.Join(", ", languages), EditorStyles.miniLabel);
-            EditorGUILayout.Space();
-
-            EditorGUILayout.LabelField("Пресеты", EditorStyles.boldLabel);
-            _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.MinHeight(140f));
-            string group = "";
-
-            foreach (CapturePreset preset in settings.Presets)
-            {
-                if (preset.Group != group)
-                {
-                    group = preset.Group;
-                    EditorGUILayout.LabelField(group, EditorStyles.miniBoldLabel);
-                }
-
-                EditorGUILayout.BeginHorizontal();
-                preset.Enabled = EditorGUILayout.Toggle(preset.Enabled, GUILayout.Width(18f));
-                EditorGUILayout.LabelField(preset.Name + (preset.Kind == CaptureKind.Video ? "  (видео)" : ""), GUILayout.Width(210f));
-                preset.Width = EditorGUILayout.IntField(preset.Width, GUILayout.Width(60f));
-                EditorGUILayout.LabelField("x", GUILayout.Width(10f));
-                preset.Height = EditorGUILayout.IntField(preset.Height, GUILayout.Width(60f));
-                EditorGUILayout.EndHorizontal();
-            }
-
-            EditorGUILayout.EndScrollView();
-
-            EditorGUILayout.BeginHorizontal();
-
-            if (GUILayout.Button("Вернуть пресеты по умолчанию"))
-            {
-                settings.ResetPresets();
-            }
-
-            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField(" ", string.Join(", ", languages), EditorStyles.miniLabel);
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Настройки", EditorStyles.boldLabel);
-            settings.OutputPath = EditorGUILayout.TextField("Папка", settings.OutputPath);
-            settings.FrameRate = EditorGUILayout.IntSlider("Кадров в секунду", settings.FrameRate, 10, 120);
-            settings.VideoSeconds = EditorGUILayout.Slider("Длина ролика, с", settings.VideoSeconds, 1f, 120f);
-            settings.RecordAudio = EditorGUILayout.Toggle("Писать звук", settings.RecordAudio);
-            settings.HiddenLayers = EditorGUILayout.MaskField("Прятать слои", settings.HiddenLayers, UnityEditorInternal.InternalEditorUtility.layers);
-            settings.ScreenshotKey = (KeyCode)EditorGUILayout.EnumPopup("Клавиша скриншота", settings.ScreenshotKey);
-            settings.VideoKey = (KeyCode)EditorGUILayout.EnumPopup("Клавиша записи", settings.VideoKey);
+            EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
+            settings.OutputPath = EditorGUILayout.TextField("Output folder", settings.OutputPath);
+            settings.FrameRate = EditorGUILayout.IntSlider("Frame rate", settings.FrameRate, 10, 120);
+            settings.VideoSeconds = EditorGUILayout.Slider("Video length, s", settings.VideoSeconds, 1f, 120f);
+            settings.RecordAudio = EditorGUILayout.Toggle("Record audio", settings.RecordAudio);
+            settings.HiddenLayers = EditorGUILayout.MaskField("Hide layers", settings.HiddenLayers, UnityEditorInternal.InternalEditorUtility.layers);
+            settings.ScreenshotKey = (KeyCode)EditorGUILayout.EnumPopup("Screenshot key", settings.ScreenshotKey);
+            settings.VideoKey = (KeyCode)EditorGUILayout.EnumPopup("Record key", settings.VideoKey);
 
             DrawHiddenObjects(settings);
-
             EditorGUILayout.Space();
 
             if (Application.isPlaying == false)
             {
-                EditorGUILayout.HelpBox("Съёмка идёт в Play Mode: запустите игру, доведите её до нужного места и снимайте.", MessageType.Info);
+                EditorGUILayout.HelpBox("Capture runs in Play Mode: enter play, get the game to the right moment and shoot.", MessageType.Info);
                 settings.Persist();
                 return;
             }
 
             using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
             {
-                if (GUILayout.Button("Снять скриншоты на всех языках", GUILayout.Height(28f)))
+                if (GUILayout.Button("Capture frame in every language", GUILayout.Height(28f)))
                 {
                     CaptureRuntime.Instance.TakeScreenshots();
                 }
@@ -102,7 +85,7 @@ namespace JTLStudio.SDK.Capture
 
             if (CaptureRuntime.IsRecording)
             {
-                if (GUILayout.Button("Остановить запись", GUILayout.Height(28f)))
+                if (GUILayout.Button("Stop recording", GUILayout.Height(28f)))
                 {
                     CaptureRuntime.Instance.StopVideo();
                 }
@@ -111,7 +94,7 @@ namespace JTLStudio.SDK.Capture
             {
                 using (new EditorGUI.DisabledScope(CaptureRuntime.IsBusy))
                 {
-                    if (GUILayout.Button("Записать видео на всех языках", GUILayout.Height(28f)))
+                    if (GUILayout.Button("Record video in every language", GUILayout.Height(28f)))
                     {
                         CaptureRuntime.Instance.StartVideo();
                     }
@@ -149,14 +132,14 @@ namespace JTLStudio.SDK.Capture
 
         private void DrawHiddenObjects(CaptureSettings settings)
         {
-            EditorGUILayout.LabelField("Прятать объекты по имени", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("Hide objects by name", EditorStyles.miniBoldLabel);
 
             for (int index = 0; index < settings.HiddenObjects.Count; index++)
             {
                 EditorGUILayout.BeginHorizontal();
                 settings.HiddenObjects[index] = EditorGUILayout.TextField(settings.HiddenObjects[index]);
 
-                if (GUILayout.Button("Убрать", GUILayout.Width(70f)))
+                if (GUILayout.Button("Remove", GUILayout.Width(70f)))
                 {
                     settings.HiddenObjects.RemoveAt(index);
                     EditorGUILayout.EndHorizontal();
@@ -169,7 +152,7 @@ namespace JTLStudio.SDK.Capture
             EditorGUILayout.BeginHorizontal();
             _newObject = EditorGUILayout.TextField(_newObject);
 
-            if (GUILayout.Button("Добавить", GUILayout.Width(70f)) && string.IsNullOrWhiteSpace(_newObject) == false)
+            if (GUILayout.Button("Add", GUILayout.Width(70f)) && string.IsNullOrWhiteSpace(_newObject) == false)
             {
                 settings.HiddenObjects.Add(_newObject.Trim());
                 _newObject = "";

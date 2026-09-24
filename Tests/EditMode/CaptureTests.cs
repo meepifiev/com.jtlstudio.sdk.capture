@@ -1,61 +1,53 @@
-using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace JTLStudio.SDK.Capture.Tests
 {
     public class CaptureTests
     {
         [Test]
-        public void DefaultPresetsCoverEveryStore()
+        public void EveryResolutionHasALabel()
         {
-            List<CapturePreset> presets = CapturePresets.Defaults();
-            List<string> groups = new List<string>();
+            Assert.AreEqual(CaptureResolutions.Sizes.Length + 1, CaptureResolutions.Labels.Length);
+            Assert.AreEqual("Custom", CaptureResolutions.Labels[CaptureResolutions.CustomIndex]);
+        }
 
-            foreach (CapturePreset preset in presets)
+        [Test]
+        public void CustomIndexTakesTheCustomSize()
+        {
+            Vector2Int custom = new Vector2Int(640, 360);
+
+            Assert.AreEqual(new Vector2Int(1920, 1080), CaptureResolutions.Size(0, custom));
+            Assert.AreEqual(custom, CaptureResolutions.Size(CaptureResolutions.CustomIndex, custom));
+        }
+
+        [Test]
+        public void CustomSizeIsClamped()
+        {
+            CaptureSettings settings = CaptureSettings.instance;
+            int index = settings.ResolutionIndex;
+            Vector2Int size = settings.CustomSize;
+
+            try
             {
-                if (groups.Contains(preset.Group) == false)
-                {
-                    groups.Add(preset.Group);
-                }
+                settings.CustomSize = new Vector2Int(100000, 1);
+
+                Assert.AreEqual(8192, settings.CustomSize.x);
+                Assert.AreEqual(16, settings.CustomSize.y);
             }
-
-            Assert.Contains(CapturePresets.Yandex, groups);
-            Assert.Contains(CapturePresets.YouTube, groups);
-            Assert.Contains(CapturePresets.GooglePlay, groups);
-            Assert.Contains(CapturePresets.AppStore, groups);
-            Assert.Contains(CapturePresets.RuStore, groups);
-        }
-
-        [Test]
-        public void DefaultsHaveNoPromoBanners()
-        {
-            foreach (CapturePreset preset in CapturePresets.Defaults())
+            finally
             {
-                Assert.AreNotEqual(470, preset.Height, preset.Name);
-                Assert.AreNotEqual(500, preset.Height, preset.Name);
+                settings.CustomSize = size;
+                settings.ResolutionIndex = index;
             }
         }
 
         [Test]
-        public void PresetSizeIsClamped()
+        public void FileNameHasSizeAndLanguage()
         {
-            CapturePreset preset = new CapturePreset("Тест", "Кадр", "test_frame", 1920, 1080, CaptureKind.Screenshot);
+            string name = CaptureOutput.Name(new Vector2Int(1080, 1920), Language.Russian, "png");
 
-            preset.Width = 100000;
-            preset.Height = 1;
-
-            Assert.AreEqual(8192, preset.Width);
-            Assert.AreEqual(16, preset.Height);
-        }
-
-        [Test]
-        public void FileNameHasPresetSizeAndLanguage()
-        {
-            CapturePreset preset = new CapturePreset(CapturePresets.Yandex, "Скриншот", "yandex_landscape", 1920, 1080, CaptureKind.Screenshot);
-
-            string name = CaptureOutput.Name(preset, Language.Russian, "png");
-
-            StringAssert.Contains("yandexlandscape_1920x1080", name);
+            StringAssert.Contains("1080x1920", name);
             StringAssert.Contains("_ru_", name);
             StringAssert.EndsWith(".png", name);
         }

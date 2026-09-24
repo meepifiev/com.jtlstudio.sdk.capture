@@ -87,13 +87,7 @@ namespace JTLStudio.SDK.Capture
         {
             CaptureSettings settings = CaptureSettings.instance;
             List<Language> languages = CaptureLanguages.Selected();
-            List<CapturePreset> presets = EnabledPresets(settings, CaptureKind.Screenshot);
-
-            if (presets.Count == 0)
-            {
-                Status = "Ни один пресет скриншотов не включён.";
-                yield break;
-            }
+            Vector2Int size = settings.Size;
 
             IsBusy = true;
             Language original = JTLSDK.IsCreated ? JTLSDK.Language.Current : languages[0];
@@ -101,37 +95,32 @@ namespace JTLStudio.SDK.Capture
             Time.timeScale = 0f;
             _scene.Hide(settings);
             string folder = CaptureOutput.Folder(settings);
+            bool resized = GameViewResolution.Apply(size.x, size.y);
+
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+
             int saved = 0;
-            int total = presets.Count * languages.Count;
 
-            foreach (CapturePreset preset in presets)
+            foreach (Language language in languages)
             {
-                bool resized = GameViewResolution.Apply(preset.Width, preset.Height);
-
-                yield return new WaitForEndOfFrame();
+                CaptureLanguages.Apply(language);
                 yield return new WaitForEndOfFrame();
                 yield return new WaitForEndOfFrame();
 
-                foreach (Language language in languages)
+                Texture2D frame = ScreenCapture.CaptureScreenshotAsTexture();
+                Texture2D shot = CaptureImage.Fit(frame, size.x, size.y);
+                CaptureImage.WritePng(shot, Path.Combine(folder, CaptureOutput.Name(size, language, "png")));
+
+                if (shot != frame)
                 {
-                    CaptureLanguages.Apply(language);
-                    yield return new WaitForEndOfFrame();
-                    yield return new WaitForEndOfFrame();
-
-                    Texture2D frame = ScreenCapture.CaptureScreenshotAsTexture();
-                    Texture2D shot = CaptureImage.Fit(frame, preset.Width, preset.Height);
-                    string path = Path.Combine(folder, CaptureOutput.Name(preset, language, "png"));
-                    CaptureImage.WritePng(shot, path);
-
-                    if (shot != frame)
-                    {
-                        DestroyImmediate(shot);
-                    }
-
-                    DestroyImmediate(frame);
-                    saved++;
-                    Status = (resized ? "Снято " : "Game View не перестроился, кадрирую: ") + saved + " из " + total;
+                    DestroyImmediate(shot);
                 }
+
+                DestroyImmediate(frame);
+                saved++;
+                Status = (resized ? "Captured " : "Game View kept its size, cropping: ") + saved + " of " + languages.Count;
             }
 
             GameViewResolution.Restore();
@@ -139,7 +128,7 @@ namespace JTLStudio.SDK.Capture
             _scene.Restore();
             Time.timeScale = scale;
             IsBusy = false;
-            Status = "Готово: " + saved + " скриншотов в " + folder;
+            Status = "Done: " + saved + " frames " + size.x + "x" + size.y + " in " + folder;
             CaptureOutput.Reveal(folder);
         }
 
@@ -147,20 +136,13 @@ namespace JTLStudio.SDK.Capture
         {
             CaptureSettings settings = CaptureSettings.instance;
             List<Language> languages = CaptureLanguages.Selected();
-            List<CapturePreset> presets = EnabledPresets(settings, CaptureKind.Video);
+            Vector2Int size = settings.Size;
 
-            if (presets.Count == 0)
-            {
-                Status = "Ни один пресет видео не включён.";
-                yield break;
-            }
-
-            CapturePreset preset = presets[0];
             IsBusy = true;
             IsRecording = true;
             Language original = JTLSDK.IsCreated ? JTLSDK.Language.Current : languages[0];
             _scene.Hide(settings);
-            GameViewResolution.Apply(preset.Width, preset.Height);
+            GameViewResolution.Apply(size.x, size.y);
 
             yield return new WaitForEndOfFrame();
             yield return new WaitForEndOfFrame();
@@ -172,8 +154,8 @@ namespace JTLStudio.SDK.Capture
             VideoTrackAttributes video = new VideoTrackAttributes
             {
                 frameRate = new MediaRational(settings.FrameRate),
-                width = (uint)preset.Width,
-                height = (uint)preset.Height,
+                width = (uint)size.x,
+                height = (uint)size.y,
                 includeAlpha = false
             };
 
@@ -186,7 +168,7 @@ namespace JTLStudio.SDK.Capture
 
             foreach (Language language in languages)
             {
-                string path = Path.Combine(folder, CaptureOutput.Name(preset, language, "mp4"));
+                string path = Path.Combine(folder, CaptureOutput.Name(size, language, "mp4"));
                 encoders.Add(settings.RecordAudio
                     ? new MediaEncoder(path, video, audio)
                     : new MediaEncoder(path, video));
@@ -214,7 +196,7 @@ namespace JTLStudio.SDK.Capture
                     yield return new WaitForEndOfFrame();
 
                     Texture2D shot = ScreenCapture.CaptureScreenshotAsTexture();
-                    Texture2D picture = CaptureImage.Fit(shot, preset.Width, preset.Height);
+                    Texture2D picture = CaptureImage.Fit(shot, size.x, size.y);
                     encoders[index].AddFrame(picture);
 
                     if (picture != shot)
@@ -254,7 +236,7 @@ namespace JTLStudio.SDK.Capture
                 }
 
                 written++;
-                Status = "Записано " + written + " из " + frames + " кадров";
+                Status = "Recorded " + written + " of " + frames + " frames";
             }
 
             if (settings.RecordAudio)
@@ -273,23 +255,8 @@ namespace JTLStudio.SDK.Capture
             _scene.Restore();
             IsRecording = false;
             IsBusy = false;
-            Status = "Готово: " + languages.Count + " роликов по " + written + " кадров в " + folder;
+            Status = "Done: " + languages.Count + " videos " + size.x + "x" + size.y + ", " + written + " frames each, in " + folder;
             CaptureOutput.Reveal(folder);
-        }
-
-        private List<CapturePreset> EnabledPresets(CaptureSettings settings, CaptureKind kind)
-        {
-            List<CapturePreset> presets = new List<CapturePreset>();
-
-            foreach (CapturePreset preset in settings.Presets)
-            {
-                if (preset.Enabled && preset.Kind == kind)
-                {
-                    presets.Add(preset);
-                }
-            }
-
-            return presets;
         }
     }
 }

@@ -1,9 +1,9 @@
 {
   "name": "com.jtlstudio.sdk.capture",
   "displayName": "JTL SDK Capture",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "unity": "2021.3",
-  "description": "Screenshots and video for store pages: one pass captures every language of the active configuration, sizes come from platform presets.",
+  "description": "Screenshots and video for store pages: pick a resolution, one pass captures every language of the active configuration.",
   "author": {
     "name": "JTL Studio",
     "url": "https://github.com/meepifiev/com.jtlstudio.sdk.capture"
